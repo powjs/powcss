@@ -1,0 +1,15 @@
+{
+  "preset": "google",
+  "fix": true,
+  "disallowSpacesInAnonymousFunctionExpression": null,
+  "validateLineBreaks": "LF",
+  "validateIndentation": 2,
+  "excludeFiles": ["node_modules/**"],
+  "maximumLineLength": {
+    "value": 100,
+    "allExcept": ["comments", "regex"]
+  },
+  "validateQuoteMarks": "'",
+  "requireDotNotation": false,
+  "requireCamelCaseOrUpperCaseIdentifiers": {"allowedPrefixes": ["opt_"]}
+}
