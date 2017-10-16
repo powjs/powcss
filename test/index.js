@@ -99,6 +99,10 @@ let roots = [
     src: 'div{\n color: red\n width:  10px\n}',
     css: `:0  div:0 decl color: red:1 decl width: 10px`,
     fmt: 'div\n  color: red\n  width: 10px'
+  },{
+    src: 'let s=1;\\\nfor(let i=1;i<1;i++) {\\\ns=1;\\\n}',
+    css: `:0  let s=1;for(let i=1;i<1;i++) {s=1;}`,
+    fmt: 'let s=1;for(let i=1;i<1;i++) {s=1;}'
   }
 ];
 

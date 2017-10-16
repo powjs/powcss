@@ -1,10 +1,7 @@
 const lineify = require('./lineify'),
   scripts = require('./scripts'),
-  toString = Object.prototype.toString,
-  CONTINUATION = '&,+-/*|=([',
-  msg = function(msg, tok) {
-    return `${msg} at: <anonymous>:${tok.line}:${tok.column}`;
-  };
+  util =  require('./util'),
+  CONTINUATION = '&\\,+-/*|=([';
 
 /**
  * 插件接口定义, 理论上接口的行为是自由的, 事实上需要规范化才能正常工作.
@@ -13,37 +10,65 @@ const lineify = require('./lineify'),
  */
 class Plugin {
   /**
-   * 预处理
-   * @see PowCSS.parse
-   */
-  parse(source) {}
-
-  /**
-   * 编译节点树中的一个 pending 节点(不包括子节点), 生成参数数据.
-   * 解析后, 所有非 comment, decl 节点都是 pending 节点.
-   * 插件处理自己认识的节点, 附加参数数据并标记 type 为 'block'.
-   * 一旦节点类型被标记, 不再尝试其它插件.
+   * 编译节点树中的一个 pending 节点生成渲染函数. 这里直接给出渲染函数的通用形式:
    *
-   * 参数数据是为了生成可执行渲染函数, 因此参数数据包括
-   *
-   *   1. 上层传递实参的表达式
-   *   2. 本节点渲染函数的形参
-   *   3. 约定上下文参数 ctx 总是被添加, 并且不需要显示声明
-   *
-   * 所以最终需要编译插件确定两个参数数据
-   *
-   *  1. args   string 实参表达式
-   *  2. params string 行参, ctx 总是自动添加到第一个
-   *
-   * 即编译解决的核心问题是:
-   *
-   *   (function(...params){
+   *   (function(ctx, param1, param2) {
+   *     this.render(ctx, args1, args2) // 调用子节点渲染函数
    *   })(...args)
    *
-   * 提示: rule, decl 节点由 PowCSS 负责处理, 它们的格式是约定的:
+   * 该形式包括
    *
-   *  1. rule 允许 key 使用嵌套符号 '&' 和模板表达式 '${expr}'
-   *  2. decl 允许 key, val 使用模板表达式 '${expr}'
+   *   1. 上层传递实参的表达式 ...args
+   *   2. 子节点渲染函数的形参 ctx, param1, param2
+   *   3. 子节点渲染函数的实参 ctx, args1, args2
+   *
+   * 如果没有声明子节点形参, 继承当前节点的形参. 根本问题是如何描述这三个声明.
+   *
+   *  1. args   string 子节点渲染函数实参
+   *  2. param  string 子节点渲染函数行参
+   *  3. body   string 子节点渲染函数执行体
+   *
+   * 编译方法需要在节点上设置两个属性
+   *
+   *   1. .type string
+   *     'block' 表示块规则, PowJS 自动识别是否包含子节点渲染代码 this.render
+   *   2. .scripts object
+   *     args  必选
+   *     param 缺省合并 args 和继承形参, 除非显示定义
+   *     body  缺省等于 source, 里面的 '....' 会被替换为继承形参列表
+
+   * 其实最简单的方法是直接用 JavaScript 语法写, 比如:
+   *
+   *  let s='';\
+   *  for(let x=1; x<=12; x++) {\
+   *    s += `,.col-xs-${x},.col-md-${x},.col-lg-${x}`;\
+   *  }
+   *    ${s.slice(1)}
+   *      position: relative
+   *      min-height: 1px
+   *      padding-right: ${ctx.colPaddingRight}px
+   *      padding-left: ${ctx.colPaddingLeft}px
+   *
+   * 行尾 '\' 表示续行, 并行在解析中完成. 上例的 js 代码可合并为一行, 比如:
+   *
+   * let s=',';for(let x=1;x<=12;x++)s=`${s}.col-xs-${x},.col-md-${x},.col-lg-${x}`;
+   *
+   * PowCSS 预制几个 JS 规则
+   *
+   * @see scripts
+   *
+   * 提示:
+   *
+   * 任何时候都不应该更改 .source.
+   *
+   * 一个 block 规则必选包含子节点, 无论是 rule 或 decl
+   *
+   * 方便起见, PowCSS.compile 会对 args, render 进行 trim 处理.
+   *
+   * rule, decl 节点由 PowCSS 负责处理, 它们的格式是约定的:
+   *
+   *   1. rule 允许 key 使用嵌套符号 '&' 和模板表达式 '${expr}'
+   *   2. decl 允许 key, val 使用模板表达式 '${expr}'
    *
    * @param  {object} node  node === nodes[index]
    * @param  {object} ctx   编译上下文选项
@@ -90,20 +115,8 @@ class PowCSS {
   process(source, context) {
     this.result = source;
     if (!source) return this;
-
-    this.plugins.some((chip)=> {
-      this.result = chip.parse && chip.parse(source);
-      return !!this.result;
-    });
-
-    this.result = this.result || this.parse(source);
-
-    if (!this.result)
-      this.result = source;
-    else if (context)
-      this.compile(context);
-
-    return this;
+    this.result = this.parse(source);
+    return context && this.compile(context) || this;
   }
 
   /**
@@ -119,7 +132,7 @@ class PowCSS {
    * @return {object} root 节点树
    */
   parse(source) {
-    if (typeof source !== 'string') return;
+    if (typeof source !== 'string') return source;
 
     let root = {
           offset: 0,
@@ -153,7 +166,7 @@ class PowCSS {
       if (tok.source[0] === '}') {
         let last = parent.nodes[parent.nodes.length - 1];
         if (!last.source.endsWith('{'))
-          throw new Error(msg(`Unpaired brackets from ${last.line}:${last.column}` , tok));
+          throw new Error(util.info(`Unpaired brackets from ${last.line}:${last.column}` , tok));
         last.source = last.source.slice(0, -1).trimRight();
         i++;
         continue;
@@ -164,7 +177,7 @@ class PowCSS {
         tok.nodes = tok.nodes || [];
         stack.push(parent);
         if (!parent.nodes.length)
-          throw new Error(msg('PowCSS broken', tok));
+          throw new Error(util.info('PowCSS broken', tok));
         parent = parent.nodes[parent.nodes.length - 1];
         continue;
       }
@@ -189,7 +202,7 @@ class PowCSS {
           }
         }
         if (tok.type !== 'comment')
-          throw new Error(msg('Unclosed comments', tok));
+          throw new Error(util.info('Unclosed comments', tok));
         continue;
       }
 
@@ -213,10 +226,11 @@ class PowCSS {
       tok.nodes = [];
 
       /**
-       * 续行符包括 `,+-/*|=([`
+       * 续行符包括 `\\,+-/*|=([`
        */
       tail = CONTINUATION.indexOf(tok.source.charAt(tok.source.length - 1));
-
+      if (tail === 1)
+        tok.source = tok.source.slice(0, -1).trim();
       if (tail > 0 && tok.type === '' ||
         tail !== -1 && tok.type === 'decl')
 
@@ -238,6 +252,10 @@ class PowCSS {
           t.source.substring(0, tail).trimRight();
 
         tail = CONTINUATION.indexOf(tok.source.charAt(tok.source.length - 1));
+
+        if (tail === 1)
+          tok.source = tok.source.slice(0, -1).trim();
+
         if (tail === -1 || tail === 0 && tok.type === '')
           break;
       }
@@ -265,11 +283,11 @@ class PowCSS {
         case 'comment':
           fmt += n.source.replace('\n', sp + ' ');
           break;
-        case '':
-          fmt += n.source;
-          break;
         case 'decl':
           fmt += n.key + ': ' + n.val;
+          break;
+        default: // block, rule
+          fmt += n.source;
           break;
       }
       if (!i && n.nodes && n.nodes.length) {
@@ -284,8 +302,8 @@ class PowCSS {
   }
 
   /**
-   * 预处理阶段 compile 入口, 使用 this.walk 遍历 this.result 执行 compile 处理.
-   * 插件返回 true 表示 compile 完成, 否则尝试其它插件进行编译.
+   * 预处理 compile 入口, 使用 this.walk 遍历 this.result 执行 compile 处理.
+   * 插件设置 type 为 'block' 表示 compile 完成, 否则尝试其它插件进行编译.
    * @param  {?Object} context 上下文, 缺省为 {params:[]}, params 是形参
    * @return {this}
    */
@@ -298,18 +316,34 @@ class PowCSS {
     context.params = context.params || [];
 
     return this.walk(root.nodes, context, function(item, context, index, nodes) {
-      return plugins.some((plugin) => {
-        if (!item.type && typeof plugin.compile === 'function') {
-          plugin.compile(item, context, index, nodes);
-          return !!item.type;
-        }
+        plugins.some((plugin) => {
+          if (!item.type && typeof plugin.compile === 'function') {
+            plugin.compile(item, context, index, nodes);
+            return !!item.type;
+          }});
 
-        item.type = item.type || 'rule';
-        if (item.type !== 'block' && item.type !== 'rule')
-          throw new Error(`illegal type ${itm.type}`, item);
-        return false;
-      }) || true;
-    });
+        if (item.type && item.type !== 'block' ||
+            item.type && (
+              !Array.isArray(item.nodes) ||
+              !item.nodes.length ||
+              typeof item.scripts !== 'object' ||
+              typeof item.scripts.args !== 'string'
+          ))
+            throw new Error(util.info(`illegal type ${itm.type}`, item));
+
+        if (!item.type)
+          item.type = 'rule';
+        else {
+          item.args = item.args.trim();
+          item.render = [
+            item.render[0].trim(),
+            item.render[1].trim()
+          ];
+
+          // TODO: ?function
+        }
+        return true;
+      });
   }
 
   /**
@@ -317,7 +351,7 @@ class PowCSS {
    * 如果 callback 返回非真值, item.nodes 将不参与遍历.
    * @param  {array} nodes
    * @param  {Object} context 上下文
-   * @param  {function(object,object,number,array):bool} callback 回调函数
+   * @param  {function(object,object,number,array):Boolean} callback 回调函数
    * @return {this}
    */
   walk(nodes, context, callback) {
