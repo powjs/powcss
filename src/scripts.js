@@ -1,7 +1,7 @@
 /**
- * scripts 提供 let, if, each  语句支持, 工作期:
- *   identify
+ * scripts 提供 let, if, each 块语句支持, 工作期:
  *   compile
+ *   export
  */
 class scripts{
 
@@ -14,51 +14,33 @@ class scripts{
   }
 
   /**
-   * identify 入口
-   */
-  identify(context, node, parent, root) {
-
-  }
-
-  /**
    * compile 入口
    */
-  compile(context, node, parent, root) {
-
+  compile(n, ctx, i, ns) {
+    return !n.type &&
+      (
+        this.ify(n, ctx, i, ns) ||
+        this.each(n, ctx, i, ns) ||
+        this.lets(n, ctx, i, ns)
+      ) || false;
   }
 
-  ify() {
+  ify(n, ctx, i, ns) {
+    if(!n.source.startsWith('if ')) return false;
+    n.type = 'powcss-if';
+    //n.render = ;
+    return true;
   }
 
-  each() {
+  each(n, ctx, i, ns) {
   }
 
-  lets() {
+  lets(n, ctx, i, ns) {
   }
 
 }
 
-/**
- * comment 负责识别单行注释和块注释
- */
-function comment(lines, som, stack) {
-  while (1) {
-    let loc = {},
-      line = this.lines.next(loc);
 
-    if (!line) return;
-
-    som = cssom(line, loc);
-
-    if (col === loc.column) {
-      stack.push(som);
-    } else if (col > loc.column) {
-      som.children = [];
-      compiler(lines, stack, loc.column);
-    }
-  }
-}
-
-module.exports = function() {
-  return new directives();
+module.exports = function(option) {
+  return new scripts(option);
 };

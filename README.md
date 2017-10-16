@@ -1,6 +1,6 @@
 # PowCSS
 
-**WIP (Work In Progress**
+**WIP (Work In Progress)**
 
 PowCSS 是个 CSS 预处理工具. 理念:
 

@@ -48,11 +48,18 @@ let lines = [
   }
 ];
 
-test('tokenizes', function(assert) {
+test('lineify', function(assert) {
   for (var i = 0; i < (0 || lines.length); i++) {
     let t = lines[i],
-      tokens = powcss([]).tokenizes(t.src),
+      tokens = [],
+      scanner = lineify(t.src),
+      tok = scanner.scan(),
       j = 0;
+
+    while (tok) {
+      tokens.push(tok);
+      tok = scanner.scan();
+    }
 
     assert.equal(tokens.length, t.out.length, `broken: ${j}/${i}`);
 
@@ -74,35 +81,53 @@ test('tokenizes', function(assert) {
 let roots = [
   {
     src: 'div',
-    css: `:0 rule div`
+    css: `:0  div`,
+    fmt: 'div'
   },{
     src: 'div\n color: red',
-    css: `:0 rule div:0 decl color: red`
+    css: `:0  div:0 decl color: red`,
+    fmt: 'div\n  color: red'
   },{
     src: 'div{\n color: red\n}',
-    css: `:0 rule div:0 decl color: red`
+    css: `:0  div:0 decl color: red`,
+    fmt: 'div\n  color: red'
+  },{
+    src: 'div\n each v,k of ctx.keys\n  color:   red  \n\n',
+    css: `:0  div:0  each v,k of ctx.keys:0 decl color: red`,
+    fmt: 'div\n  each v,k of ctx.keys\n    color: red'
+  },{
+    src: 'div{\n color: red\n width:  10px\n}',
+    css: `:0  div:0 decl color: red:1 decl width: 10px`,
+    fmt: 'div\n  color: red\n  width: 10px'
   }
 ];
 
-test('root', function(assert) {
+test('root & format', function(assert) {
   for (var i = 0; i < (0 || roots.length); i++) {
     let css = roots[i],
       actual = '',
       pow = powcss([]),
-      toks = pow.tokenizes(css.src),
-      root = pow.root(toks),
+      root = pow.parse(css.src),
       v = JSON.stringify(root.nodes);
     // 瘦身
     pow.walk(root.nodes, null,
       function(n, c, i) { // jshint ignore:line
-        actual += `:${i} ${n.type} ${n.source}` +
-          (n.value ? `: ${n.value}` : '');
+        actual += `:${i} ${n.type} ${n.key || n.source}` +
+          (n.key ? `: ${n.val}` : '');
         return true;
       });
+
     if (actual === css.css) {
       assert.ok(true, `root: ${i}`);
     }else {
       assert.equal(actual, css.css, `root: ${i}:${v}`);
+    }
+
+    actual = pow.format(root);
+    if (actual=== css.fmt) {
+      assert.ok(true, `fmt: ${i}`);
+    }else {
+      assert.equal(actual, css.fmt, `fmt: ${i}:${v}`);
     }
   }
   assert.end();
