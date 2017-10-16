@@ -63,10 +63,10 @@ test('lineify', function(assert) {
 
     assert.equal(tokens.length, t.out.length, `broken: ${j}/${i}`);
 
-    while (j<t.out.length) {
+    while (j < t.out.length) {
       let tok = tokens[j];
 
-      if (!tok||!tok.source) {
+      if (!tok || !tok.source) {
         assert.fail(`empty: ${j}/${i}`);
         break;
       }
@@ -113,7 +113,7 @@ test('root & format', function(assert) {
       pow = powcss([]),
       root = pow.parse(css.src),
       v = JSON.stringify(root.nodes);
-    // 瘦身
+
     pow.walk(root.nodes, null,
       function(n, c, i) { // jshint ignore:line
         actual += `:${i} ${n.type} ${n.key || n.source}` +
@@ -128,11 +128,59 @@ test('root & format', function(assert) {
     }
 
     actual = pow.format(root);
-    if (actual=== css.fmt) {
+    if (actual === css.fmt) {
       assert.ok(true, `fmt: ${i}`);
     }else {
       assert.equal(actual, css.fmt, `fmt: ${i}:${v}`);
     }
+  }
+  assert.end();
+});
+
+let scripts = [
+  {
+    src: 'let s=1;\n ${s}\n  color: red',
+    js: ':0 s  let s=1;'
+  },{
+    src: 'let [a,b]=[1,2];\n ${s}\n  color: red',
+    js: ':0 a,b  let [a,b]=[1,2];'
+  },{
+    src: 'if (a)\n  color: red',
+    js: ':0   if (a)this.render(ctx,....);else return;'
+  },{
+    src: 'if(a)\n  color: red',
+    js: ':0   if(a)this.render(ctx,....);else return;'
+  },{
+    src: 'if(a) this.render(ctx)\n  color: red',
+    js: ':0   if(a) this.render(ctx);else return;'
+  },{
+    src: 'ctx.each(expr,(v,k))\n color: red',
+    js: ':0 v,k  ctx.each(expr,(v,k)=>{this.render(ctx,v,k,....)})'
+  },{
+    src: 'ctx.each(expr,(v,k)=>{})\n color: red',
+    js: ':0 v,k  ctx.each(expr,(v,k)=>{this.render(ctx,v,k,....)})'
+  },{
+    src: 'ctx.each(expr,(v,k)=>{x+1})\n color: red',
+    js: ':0 v,k  ctx.each(expr,(v,k)=>{x+1;this.render(ctx,v,k,....)})'
+  }
+];
+
+test('compile', function(assert) {
+  for (var i = 0; i < (0 || scripts.length); i++) {
+    let js = scripts[i],
+      actual = '',
+      pow = powcss([]),
+      ns = pow.process(js.src, {}).result.nodes;
+
+    pow.walk(ns, null,
+      function(n, c, i) { // jshint ignore:line
+        n = n.scripts;
+        if (n)
+          actual += `:${i} ${n.args} ${n.param} ${n.body}`;
+        return true;
+      });
+
+    assert.equal(actual, js.js);
   }
   assert.end();
 });

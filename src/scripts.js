@@ -2,13 +2,13 @@ const IFX = /if[ ]+([_$a-zA-Z]+)[ ]*=/,
   util =  require('./util');
 
 /**
- * scripts 采用原生 js 语法提供 let, if, each 规则支持, 工作期:
+ * scripts 所有方法采用原生 js 语法, 自动补全 this.render, 工作期:
  *   compile
  */
 class scripts{
 
   /**
-   * 接受一个选项参数, 细节参见相关方法
+   * 预留一个选项, 方便扩展
    * @param  {?Object} option
    */
   constructor(option) {
@@ -35,12 +35,23 @@ class scripts{
    * 即: 先补全 this.render, 再补全 else return;
    */
   ify(n, ctx, i, ns) {
-    if (!n.source.startsWith('if ')) return false;
-    let m = n.source.match(IFX),
-      ify = m && m[1] || '$';
+    if (!n.source.startsWith('if(') &&
+      !n.source.startsWith('if (')
+      ) return false;
+
     n.type = 'block';
-    n.args = n.source.substring(m && m[0].length || 3);
-    n.render = [ify, `if(!${ify}) return;....;`];
+    let body = n.source;
+    if (body.indexOf('this.render(') === -1)
+      body += 'this.render(ctx,....);';
+
+    if (!body.endsWith(';')) body += ';';
+
+    if (!body.endsWith('else return') &&
+      !body.endsWith('else return;'))
+      body += 'else return;';
+
+    if (!body.endsWith(';')) body += ';';
+    n.scripts = {args: '',body: body};
     return true;
   }
 
@@ -50,30 +61,50 @@ class scripts{
    *   ctx.each(expr, (val, key))               // 自动补全为
    *   ctx.each(expr, (val, key)=>{this.render(ctx,val, key,....)})
    *   ctx.each(expr, (val, key)=>{code})       // 必须包含 this.render
-   *   ctx.each(expr, function(val, key){code}) // 必须包含 this.render
    *
-   * 即: 如果尾部括号为 '})', 必须含有完整的 this.render
    */
   each(n, ctx, i, ns) {
-    if (!n.source.startsWith('each ')) return false;
-    let  x = n.source.indexOf(' of ');
+    if (!n.source.startsWith('ctx.each(')) return false;
+    let body = n.source, args = '';
 
-    if (x == -1)
-      throw new Error(util.info(`illegal each`, n));
-    let vk = n.source.substring(5, x);
+    if (!body.endsWith('})') && !body.endsWith('))'))
+      throw new Error(util.info(`illegal ctx.each`, n));
+
+    let x = body.lastIndexOf(
+      ')=>'),
+      s = body.lastIndexOf('(', x);
+
+    if (body.indexOf('this.render(') === -1) {
+      if (body.endsWith('))')) {
+        x = body.lastIndexOf('(', body.length - 3);
+        if (x === -1)
+          throw new Error(util.info(`illegal ctx.each`, n));
+        args = body.slice(x + 1, -2);
+        body = body.slice(0, -1) + '=>{this.render(ctx,' +
+          body.slice(x + 1, -2) + ',....)})';
+      }else {
+        if (x === -1 || s === -1)
+          throw new Error(util.info(`illegal ctx.each`, n));
+        args = body.slice(s + 1, x);
+        body = body.slice(0, -2).trim();
+        if (!body.endsWith(';') && !body.endsWith('{')) body += ';';
+        body += 'this.render(ctx,' + args + ',....)})';
+      }
+    }else {
+      if (x === -1 || s === -1)
+        throw new Error(util.info(`illegal ctx.each`, n));
+      args = body.slice(s + 1, x);
+    }
     n.type = 'block';
-    n.args = n.source.substring(x + 1);
-    n.render = [`$`, `ctx.each($, function(${vk}){....;})`];
+    n.scripts = {args, body};
     return true;
   }
 
   /**
-   * let 规则采用原生 JS 语法, 表示嵌入 js 代码并向下传递参数. 语法:
+   * let 嵌入 js 代码并向下传递参数. 语法:
    *
    *   let v1 = expr; code;
    *   let [v1,v2] = [expr,expr]; code; // ES6 解构赋值
-   *
-   * 变量名 vN... 会传递给子渲染函数, 形参的和实参的
    */
   lets(n, ctx, i, ns) {
     if (!n.source.startsWith('let ')) return false;
@@ -86,7 +117,8 @@ class scripts{
     if (args[0] === '[')
       args = args.slice(1, -1);
 
-    n.scripts = {args};
+    n.type = 'block';
+    n.scripts = {args, body: ''};
   }
 
 }

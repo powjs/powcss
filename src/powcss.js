@@ -31,9 +31,9 @@ class Plugin {
    * 编译方法需要在节点上设置两个属性
    *
    *   1. .type string
-   *     'block' 表示块规则, PowJS 自动识别是否包含子节点渲染代码 this.render
+   *     'block' 表示块规则, PowJS 会断言是否使用了 this.render
    *   2. .scripts object
-   *     args  必选
+   *     args  可选
    *     param 缺省合并 args 和继承形参, 除非显示定义
    *     body  缺省等于 source, 里面的 '....' 会被替换为继承形参列表
 
@@ -322,26 +322,30 @@ class PowCSS {
             return !!item.type;
           }});
 
-        if (item.type && item.type !== 'block' ||
-            item.type && (
-              !Array.isArray(item.nodes) ||
-              !item.nodes.length ||
-              typeof item.scripts !== 'object' ||
-              typeof item.scripts.args !== 'string'
-          ))
-            throw new Error(util.info(`illegal type ${itm.type}`, item));
-
-        if (!item.type)
+        if (!item.type) {
           item.type = 'rule';
-        else {
-          item.args = item.args.trim();
-          item.render = [
-            item.render[0].trim(),
-            item.render[1].trim()
-          ];
-
-          // TODO: ?function
+          return true;
         }
+
+        if (item.type !== 'block')
+          return true;
+
+        if (
+            !Array.isArray(item.nodes) ||
+            !item.nodes.length ||
+            typeof item.scripts !== 'object'
+          )
+          throw new Error(util.info(`illegal type ${item.type}`, item));
+
+        let scripts = item.scripts;
+        item.scripts = {
+          args: scripts.args && scripts.args.trim() || '',
+          param: scripts.param && scripts.param.trim() || '',
+          body: scripts.body && scripts.body.trim() || item.source
+        };
+
+        // TODO: ?function
+
         return true;
       });
   }
