@@ -178,3 +178,23 @@ test('compile && run', function(assert) {
   }
   assert.end();
 });
+
+let nested = [
+  {
+    src:'@charset "utf-8"',
+    css:'@charset "utf-8";'
+  },{
+    src:'@media (max-width:599px)\n div\n  w: 1\n  c: 2',
+    css:'@media (max-width:599px) {\ndiv {\nw: 1;\nc: 2;\n}\n}'
+  }
+];
+
+test('nested', function(assert) {
+  for (var i = 0; i < (0 || nested.length); i++) {
+    let js = nested[i],
+      ctx = powcss().run(js.src);
+
+    assert.equal(ctx.toCSS().trimRight(), js.css, JSON.stringify(ctx.rules));
+  }
+  assert.end();
+});

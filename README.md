@@ -93,6 +93,40 @@ yarn add powcss
 <script src="//unpkg.com/powcss/dist/powcss.min.js"></script>
 ```
 
+## 缩进语法
+
+PowCSS 支持缩进风格的 CSS 源码, 花括号和分号是可选的, 确保正确的缩进即可.
+
+```styl
+/**
+ * 支持块注释, 单行注释以及行尾注释, 行尾注释会被抛弃.
+ * 兼容 CSS 花括号块写法.
+ */
+selector1 {
+  key: val;
+}
+
+selector2
+  key: val
+
+// 续行符是 '&\,+-/*|=([' 之一
+continuation
+  border: 1px solid \ // 符号 '\' 会被剔除, 其它续行符会被保留
+    red
+
+// incorrect, ': ' 特别用来识别 decl
+@media (max-width: 599px)
+  div
+    display: block
+
+// correct
+@media (max-width:599px)
+  div
+    display: block
+```
+
+**约定属性分隔符 ':' 后面必须跟一个空格或换行, 慎用 ': ' 避免冲突**
+
 ## Compiler
 
 编译器负责识别嵌入的 ES6 语句, 并编译返回 JS 源代码.
@@ -151,30 +185,6 @@ Context 负责提供生成和维护 CSS 规则的基本方法, 值表达式由�
 PowCSS 实现的 Context 维护规则的 open 和 close 等操作, 并负责处理 '&' 占位符.
 
 参见 [API](api.md)
-
-## 缩进语法
-
-PowCSS 支持缩进风格的 CSS 源码, 花括号和分号是可选的, 确保正确的缩进即可.
-
-```styl
-/**
- * 支持块注释, 单行注释以及行尾注释, 行尾注释会被抛弃.
- * 兼容 CSS 花括号块写法.
- */
-selector1 {
-  key: val;
-}
-
-selector2
-  key: val
-
-// 续行符是 '&\,+-/*|=([' 之一
-continuation
-  border: 1px solid \ // 符号 '\' 会被剔除, 其它续行符会被保留
-    red
-```
-
-约定属性分隔符 ':' 后面必须跟一个空格或换行, 避免与其它有 ':' 的语法冲突.
 
 ## License
 
