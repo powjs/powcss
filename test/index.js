@@ -147,17 +147,20 @@ let scripts = [
   {
     src: 'let s=1;\n ${s}\n  color: red',
     js: 'let s = 1;\nctx.open(`${s}`);\nctx.decl("color", "red");\nctx.close();\n',
-    css: [{name: '1',decls: {color: 'red'}}]
+    rules: [{name: '1',decls: {color: 'red'}}],
+    css:'1 {\ncolor: red;\n}\n'
   },{
     src: 'let [a,b]=[1,2];\n ${b}\n  color: red',
     js: 'let [a, b] = [1, 2];\nctx.open(`${b}`);\nctx.decl("color", "red");\nctx.close();\n',
-    css: [{name: '2',decls: {color: 'red'}}]
+    rules: [{name: '2',decls: {color: 'red'}}],
+    css:'2 {\ncolor: red;\n}\n'
   },{
     src: 'if (b){...}\n ${b}\n  color: red',
     js: 'if (b) {\n  ctx.open(`${b}`);\n  ctx.decl("color", "red");\n  ctx.close();\n}\n',
     params: 'ctx,b',
     args: [context(), '.class'],
-    css: [{name: '.class',decls: {color: 'red'}}]
+    rules: [{name: '.class',decls: {color: 'red'}}],
+    css:'.class {\ncolor: red;\n}\n'
   }
 ];
 
@@ -170,7 +173,8 @@ test('compile && run', function(assert) {
 
     let ctx = powcss().run(js.src, js.params, js.args);
 
-    assert.deepEqual(ctx.rules, js.css, actual);
+    assert.deepEqual(ctx.rules, js.rules, actual);
+    assert.equal(ctx.toCSS(), js.css, actual);
   }
   assert.end();
 });
