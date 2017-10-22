@@ -282,6 +282,7 @@ PowCSS 缺省的 Context 实现.
     * [.close()](#Context+close) ⇒ <code>this</code>
     * [.name()](#Context+name) ⇒ <code>string</code>
     * [.decl(key, val)](#Context+decl) ⇒ <code>string</code> \| <code>object</code>
+    * [.toCSS()](#Context+toCSS) ⇒ <code>string</code>
 
 <a name="new_Context_new"></a>
 
@@ -304,7 +305,7 @@ PowCSS 缺省的 Context 实现.
 
 ### context.open(name) ⇒ <code>this</code>
 当前规则入栈, 并开启一个新具名规则并替换 name 中的占位符 '&'.
-该方法必须与 close 成对使用. 嵌套使用 open 会产生嵌套规则.
+该方法必须与 close 成对使用. 只有 '@' 规则下嵌套使用 open 会产生嵌套规则.
 
 **Kind**: instance method of [<code>Context</code>](#Context)  
 
@@ -336,6 +337,13 @@ PowCSS 缺省的 Context 实现.
 | key | <code>string</code> | 
 | val | <code>string</code> \| <code>object</code> | 
 
+<a name="Context+toCSS"></a>
+
+### context.toCSS() ⇒ <code>string</code>
+输出 this.rules 为 CSS 源码
+
+**Kind**: instance method of [<code>Context</code>](#Context)  
+**Returns**: <code>string</code> - css  
 <a name="lineify"></a>
 
 ## lineify
