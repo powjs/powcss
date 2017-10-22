@@ -5,7 +5,11 @@
 PowCSS 是个 CSS 预处理工具. 特征:
 
     混合 CSS, JavaScript 缩进语法
-    编译结果是个函数
+    编译结果是原生 JavaScript 函数
+
+用 PowCSS 写 CSS 才够原生
+
+![image](https://user-images.githubusercontent.com/489285/31862371-77c9cce0-b702-11e7-824d-8604fda54703.png)
 
 工作原理:
 
@@ -85,7 +89,7 @@ nodejs 环境, 演示 [runkit][]
 yarn add powcss
 ```
 
-浏览器环境, 演示 [codepen][], [requirebin][]
+浏览器环境, 演示 [requirebin][]
 
 ```html
 <script src="//unpkg.com/powcss"></script>
