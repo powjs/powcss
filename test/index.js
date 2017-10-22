@@ -1,14 +1,15 @@
 let test = require('tape'),
-  lineify = require('../src/lineify'),
-  powcss = require('../src/powcss'),
+  lineify = require('../lib/lineify'),
+  powcss = require('../lib/powcss'),
   prettier = require('prettier');
 
-function format(code, ret) {
+function format(code, log) {
   if (typeof code != 'string')
    code = '!' + JSON.stringify(code);
   code = prettier.format(code, {semi: true});
-  if (ret) return code;
-  console.log(code);
+  if (log)
+    console.log(code);
+  return code;
 }
 
 let lines = [
@@ -103,6 +104,10 @@ let roots = [
     src: 'let s=1;\\\nfor(let i=1;i<1;i++) {\\\ns=1;\\\n}',
     css: `:0  let s=1;for(let i=1;i<1;i++) {s=1;}`,
     fmt: 'let s=1;for(let i=1;i<1;i++) {s=1;}'
+  },{
+    src: 'let s=1;\n ${s}\n  color: red',
+    css: ':0  let s=1;:0  ${s}:0 decl color: red',
+    fmt: 'let s=1;\n  ${s}\n    color: red'
   }
 ];
 
@@ -116,7 +121,7 @@ test('root & format', function(assert) {
 
     pow.walk(root.nodes, null,
       function(n, c, i) { // jshint ignore:line
-        actual += `:${i} ${n.type} ${n.key || n.source}` +
+        actual += `:${i} ${n.mode} ${n.key || n.source}` +
           (n.key ? `: ${n.val}` : '');
         return true;
       });
@@ -140,45 +145,23 @@ test('root & format', function(assert) {
 let scripts = [
   {
     src: 'let s=1;\n ${s}\n  color: red',
-    js: ':0 s  let s=1;'
+    js: 'let s = 1;\nctx.open(`${s}`);\nctx.decl("color", "red");\nctx.close();\n'
   },{
     src: 'let [a,b]=[1,2];\n ${s}\n  color: red',
-    js: ':0 a,b  let [a,b]=[1,2];'
+    js: 'let [a, b] = [1, 2];\nctx.open(`${s}`);\nctx.decl("color", "red");\nctx.close();\n'
+  },{
+    src: 'if (a)\ncolor: red',
+    js: 'if (a) ctx.decl("color", "red");\n'
   },{
     src: 'if (a)\n  color: red',
-    js: ':0   if (a)this.render(ctx,....);else return;'
-  },{
-    src: 'if(a)\n  color: red',
-    js: ':0   if(a)this.render(ctx,....);else return;'
-  },{
-    src: 'if(a) this.render(ctx)\n  color: red',
-    js: ':0   if(a) this.render(ctx);else return;'
-  },{
-    src: 'ctx.each(expr,(v,k))\n color: red',
-    js: ':0 v,k  ctx.each(expr,(v,k)=>{this.render(ctx,v,k,....)})'
-  },{
-    src: 'ctx.each(expr,(v,k)=>{})\n color: red',
-    js: ':0 v,k  ctx.each(expr,(v,k)=>{this.render(ctx,v,k,....)})'
-  },{
-    src: 'ctx.each(expr,(v,k)=>{x+1})\n color: red',
-    js: ':0 v,k  ctx.each(expr,(v,k)=>{x+1;this.render(ctx,v,k,....)})'
+    js: 'if (a) ctx.decl("color", "red");\n'
   }
 ];
 
 test('compile', function(assert) {
   for (var i = 0; i < (0 || scripts.length); i++) {
     let js = scripts[i],
-      actual = '',
-      pow = powcss([]),
-      ns = pow.process(js.src, {}).result.nodes;
-
-    pow.walk(ns, null,
-      function(n, c, i) { // jshint ignore:line
-        n = n.scripts;
-        if (n)
-          actual += `:${i} ${n.args} ${n.param} ${n.body}`;
-        return true;
-      });
+      actual = format(powcss([]).process(js.src).compile());
 
     assert.equal(actual, js.js);
   }
