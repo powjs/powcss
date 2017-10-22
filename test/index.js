@@ -1,6 +1,7 @@
 let test = require('tape'),
   lineify = require('../lib/lineify'),
   powcss = require('../lib/powcss'),
+  context = require('../lib/context'),
   prettier = require('prettier');
 
 function format(code, log) {
@@ -145,25 +146,31 @@ test('root & format', function(assert) {
 let scripts = [
   {
     src: 'let s=1;\n ${s}\n  color: red',
-    js: 'let s = 1;\nctx.open(`${s}`);\nctx.decl("color", "red");\nctx.close();\n'
+    js: 'let s = 1;\nctx.open(`${s}`);\nctx.decl("color", "red");\nctx.close();\n',
+    css: [{name: '1',decls: {color: 'red'}}]
   },{
-    src: 'let [a,b]=[1,2];\n ${s}\n  color: red',
-    js: 'let [a, b] = [1, 2];\nctx.open(`${s}`);\nctx.decl("color", "red");\nctx.close();\n'
+    src: 'let [a,b]=[1,2];\n ${b}\n  color: red',
+    js: 'let [a, b] = [1, 2];\nctx.open(`${b}`);\nctx.decl("color", "red");\nctx.close();\n',
+    css: [{name: '2',decls: {color: 'red'}}]
   },{
-    src: 'if (a)\ncolor: red',
-    js: 'if (a) ctx.decl("color", "red");\n'
-  },{
-    src: 'if (a)\n  color: red',
-    js: 'if (a) ctx.decl("color", "red");\n'
+    src: 'if (b){...}\n ${b}\n  color: red',
+    js: 'if (b) {\n  ctx.open(`${b}`);\n  ctx.decl("color", "red");\n  ctx.close();\n}\n',
+    params: 'ctx,b',
+    args: [context(), '.class'],
+    css: [{name: '.class',decls: {color: 'red'}}]
   }
 ];
 
-test('compile', function(assert) {
+test('compile && run', function(assert) {
   for (var i = 0; i < (0 || scripts.length); i++) {
     let js = scripts[i],
       actual = format(powcss([]).process(js.src).compile());
 
     assert.equal(actual, js.js);
+
+    let ctx = powcss().run(js.src, js.params, js.args);
+
+    assert.deepEqual(ctx.rules, js.css, actual);
   }
   assert.end();
 });

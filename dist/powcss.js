@@ -1,3 +1,305 @@
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function (global){
+global.powcss = require('./lib/powcss.js');
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"./lib/powcss.js":5}],2:[function(require,module,exports){
+const IFX = /if[ ]+([_$a-zA-Z]+)[ ]*=/,
+  util =  require('./util');
+
+/**
+ * PowCSS 缺省的 Compiler 实现.
+ * 所有方法采用原生 js 语法, 要求源码自带嵌套占位符 '...'.
+ */
+class Compiler{
+
+  /**
+   * 构造, 参数用来对 this 进行扩展.
+   * 缺省 this.ctx = 'ctx' 表示 context 的形参名
+   */
+  constructor(...extend) {
+    extend.forEach((ext) => {
+      if (typeof ext === 'function')
+        this[ext.name] = ext;
+      else if (Object.prototype.toString.call(ext) === '[object Object]') {
+        for (let key in ext) {
+          this[key] = ext[key];
+        }
+      }
+    });
+    this.ctx = this.ctx || 'ctx';
+  }
+
+  /**
+   * compile 接口
+   */
+  compile(n, i, ns) {
+    return this.decl(n) ||
+      this.if(n) ||
+      this.each(n) ||
+      this.let(n) ||
+      this.comment(n) ||
+      this.rule(n);
+  }
+
+  /**
+   * 编译 n.mode === 'comment' 的节点
+   * 返回值是 ' ', 这意味着注释被丢弃
+   */
+  comment(n) {
+    if (n.mode !== 'comment') return;
+    return ' ';
+  }
+
+  /**
+   * 编译 !n.mode 的节点为规则节点
+   */
+  rule(n) {
+    if (n.mode) return;
+    let c = n.source.indexOf('${') === -1 && '\'' || '`';
+    return n.nodes && n.nodes.length &&
+    `${this.ctx}.open(${c}${n.source}${c});\n...${this.ctx}.close();` ||
+    `${this.ctx}.open(${c}${n.source}${c}).close();`;
+  }
+
+  /**
+   * 编译 n.mode === 'decl' 的节点
+   */
+  decl(n) {
+    if (n.mode !== 'decl') return;
+
+    let c = n.key.indexOf('${') === -1 && '\'' || '`',
+      v = n.val.endsWith(';') ?
+        n.val.substring(0, n.val.length - 1) :
+        n.val,
+      d = v.indexOf('${') === -1 && '\'' || '`';
+
+    return `${this.ctx}.decl(${c}${n.key}${c},${d}${v}${d});`;
+  }
+
+  /**
+   * if 语句, 原生语法:
+   *    if(expr) code;
+   *    if (expr) code;
+   */
+  if(n) {
+    if (n.source.startsWith('if(') || n.source.startsWith('if ('))
+      return n.source;
+  }
+
+  /**
+   * each 语句, 原生语法:
+   *
+   *   each(expr, (val, key)=>{code});
+   *   ctx.each(expr, (val, key)=>{code});
+   *
+   */
+  each(n) {
+    if (n.source.startsWith('ctx.each('))
+      return n.source;
+    if (n.source.startsWith('each(')) return 'ctx.' + n.source;
+  }
+
+  /**
+   * let 语句, 原生语法:
+   *
+   *   let v1 = expr;
+   *   let [v1,v2] = [expr, expr]; // ES6 解构赋值
+   *   let v1 = expr; code;
+   */
+  let(n) {
+    if (n.source.startsWith('let ')) return n.source;
+  }
+
+}
+
+module.exports = function(...extend) {
+  return new Compiler(...extend);
+};
+
+},{"./util":6}],3:[function(require,module,exports){
+/**
+ * @typedef {object} Rule   抽象规则
+ * @property {string} name  规则名, 也可能是个定义值, 比如 @charset
+ * @property {?object<string, string|Rule>} decls 键值声明
+ */
+
+/**
+ * PowCSS 缺省的 Context 实现.
+ * 该实现不分析 CSS 规则的合法性, 只提供结构上的操作和一些辅助方法.
+ *
+ * @property {Rule}   rule  当前维护的规则, 初始 null
+ * @property {Rule[]} rules 最终的规则数组
+ * @property {Rule[]} stack 当前规则的 parent 栈
+ */
+class Context {
+  /**
+   * 构造, 参数用来对 this 进行扩展.
+   */
+  constructor(...extend) {
+    this.rule = null;
+    this.rules = [];
+    this.stack = [];
+    extend.forEach((ext) => {
+      if (typeof ext === 'function')
+        this[ext.name] = ext;
+      else if (Object.prototype.toString.call(ext) === '[object Object]') {
+        for (let key in ext) {
+          this[key] = ext[key];
+        }
+      }
+    });
+  }
+
+  /**
+   * 遍历 x 回调 callback(val, key)
+   * @param  {object|array}   x
+   * @param  {Function( *, string)} callback 参数顺序 (val, key)
+   * @return {this}
+   */
+  each(x, callback) {
+    if (Array.isArray(x)) {
+      x.forEach(callback);
+    }else
+      Object.keys(x).forEach(function(key) {
+        callback(x[key], key);
+      });
+    return this;
+  }
+
+  /**
+   * 当前规则入栈, 并开启一个新具名规则并替换 name 中的占位符 '&'.
+   * 该方法必须与 close 成对使用. 嵌套使用 open 会产生嵌套规则.
+   * @param  {string} name
+   * @return {this}
+   */
+  open(name) {
+    if (this.rule) {
+      if (name.indexOf('&') !== -1)
+        name = name.replace(/&/g, this.name());
+      this.stack.push(this.rule);
+    }
+    this.rule = {name};
+    this.rules.push(this.rule);
+    return this;
+  }
+
+  /**
+   * 关闭当前的规则, 并弹出规则栈. 该方法必须与 .open 成对使用.
+   * @return {this}
+   */
+  close() {
+    let rule = this.stack.pop();
+    this.rule = rule;
+    return this;
+  }
+
+  /**
+   * 返回 this.rule.name
+   * @return {string}
+   */
+  name() {
+    return this.rule.name;
+  }
+
+  /**
+   * 返回或设置当前规则的 key 声明
+   * @param  {string}  key
+   * @param  {?string|object} val
+   * @return {string|object}
+   */
+  decl(key, val) {
+    if (val) {
+      if (!this.rule.decls)
+        this.rule.decls = {};
+      this.rule.decls[key] = val;
+    }
+    return this.rule.decls[key] || '';
+  }
+}
+
+module.exports = function(...extend) {
+  return new Context(...extend);
+};
+
+},{}],4:[function(require,module,exports){
+/**
+ * lineify 是个非空白行扫描器, 扫描并返回非空白行信息.
+ * @param {string} source 待扫描的字符串
+ */
+class lineify{
+  constructor(source) {
+    this.crlf = source.indexOf('\r\n') != -1 && '\r\n' ||
+      source.indexOf('\r') != -1 && '\r' || '\n';
+    this.crlfLength = this.crlf.length;
+
+    this.bol = 0;
+    this.eol = 0;
+    this.column = 1;
+    this.line = 1;
+    this.source = source;
+    this.scan(null);
+  }
+
+  /**
+   * 返回扫描到的非空白行字符串和位置信息, 并前进. 结构:
+   *   {source, offset, line, column}
+   * @return {Object|null} token 返回 null 表示 EOF
+   */
+  scan() {
+    let tok = {
+      source: this.source.substring(this.bol, this.eol).trimRight(),
+      offset: this.bol,
+      line: this.line,
+      column: this.column
+    };
+
+    if (this.eol === this.source.length) {
+      this.bol = this.eol;
+      return tok.source && tok || null;
+    }
+
+    if (this.eol) {
+      this.bol = this.eol + this.crlfLength;
+      this.line++;
+      this.column = 1;
+    }
+
+    this.eol = this.source.indexOf(this.crlf, this.bol);
+
+    if (this.eol === -1)
+      this.eol = this.source.length;
+
+    while (1) {
+      let c = this.source.charCodeAt(this.bol);
+      if (c === 32 || c === 9) {
+        this.bol++;
+        this.column++;
+        continue;
+      }
+
+      if (this.eol !== this.bol) break;
+      if (this.eol === this.source.length) break;
+
+      this.line++;
+      this.column = 1;
+
+      this.bol = this.eol + this.crlfLength;
+      this.eol = this.source.indexOf(this.crlf, this.bol);
+
+      if (this.eol === -1)
+        this.eol = this.source.length;
+    }
+
+    return tok;
+  }
+}
+
+module.exports = function(source) {
+  return new lineify(source);
+};
+
+},{}],5:[function(require,module,exports){
 const lineify = require('./lineify'),
   compiler = require('./compiler'),
   context = require('./context'),
@@ -328,3 +630,66 @@ class PowCSS {
 module.exports = function(plugins) {
   return new PowCSS(plugins);
 };
+
+},{"./compiler":2,"./context":3,"./lineify":4,"./util":6}],6:[function(require,module,exports){
+const toString = Object.prototype.toString;
+
+/**
+ * 辅助函数集合, ctx 总是(扩展)继承 util 的所有方法.
+ */
+let util = {
+  /**
+   * 返回包含位置信息的字符串, 常用于出错信息
+   * @param  {string}  message 自定义信息
+   * @param  {object}  loc     含有 line, column 的位置信息
+   * @param  {?string} at      缺省为 <anonymous>
+   * @return {string}
+   */
+  info: function(message, loc, at) {
+    return `${message} at: ${at || '<anonymous>'}:${loc.line}:${loc.column}`;
+  },
+  /**
+   * isObject
+   * @param  {*} x
+   * @return {Boolean}
+   */
+  isObject: function(x) {
+    return toString.call(x) === '[object Object]';
+  },
+  /**
+   * isNumber
+   * @param  {*} x
+   * @return {Boolean}
+   */
+  isNumber: function(x) {
+    return toString.call(x) === '[object Number]';
+  },
+  /**
+   * isArray
+   * @param  {*} x
+   * @return {Boolean}
+   */
+  isArray: function(x) {
+    return Array.isArray(x);
+  },
+  /**
+   * isString
+   * @param  {*} x
+   * @return {Boolean}
+   */
+  isString: function(x) {
+    return typeof x === 'string';
+  },
+  /**
+   * isFunction
+   * @param  {*} x
+   * @return {Boolean}
+   */
+  isFunction: function(x) {
+    return typeof x === 'function';
+  }
+};
+
+module.exports = util;
+
+},{}]},{},[1]);

@@ -1,7 +1,5 @@
 # PowCSS
 
-**WIP (Work In Progress)**
-
 PowCSS 是个 CSS 预处理工具. 特征:
 
     混合 CSS, JavaScript 缩进语法
@@ -89,10 +87,10 @@ nodejs 环境, 演示 [runkit][]
 yarn add powcss
 ```
 
-浏览器环境, 演示 [requirebin][]
+浏览器环境, 演示 [codepen][], [requirebin][]
 
 ```html
-<script src="//unpkg.com/powcss"></script>
+<script src="//unpkg.com/powcss/dist/powcss.min.js"></script>
 ```
 
 ## Compiler
