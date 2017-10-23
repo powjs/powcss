@@ -1,7 +1,7 @@
 {
   "name": "powcss",
   "description": "Modern preprocessor for transforming styles based on ES6 template Strings",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "repository": {
     "type": "git",
     "url": "https://github.com/powjs/powcss.git"
@@ -33,6 +33,8 @@
   },
   "scripts": {
     "test": "node --harmony ./test/index.js | tap-spec",
-    "dist": "browserify -e global-bundle.js -o ./dist/powcss.js --no-bundle-external && uglifyjs ./dist/powcss.js -o ./dist/powcss.min.js"
+    "api": "jsdoc2md lib/powcss.js lib/compiler.js lib/context.js lib/lineify.js lib/util.js > api.md",
+    "dist": "browserify -e global-bundle.js -o ./dist/powcss.js --no-bundle-external && uglifyjs ./dist/powcss.js -o ./dist/powcss.min.js",
+    "prepublish": "yarn test && yarn api && yarn dist"
   }
 }
