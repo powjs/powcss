@@ -11,7 +11,8 @@
 </dd>
 <dt><a href="#Context">Context</a></dt>
 <dd><p>PowCSS 缺省的 Context 实现.
-该实现不分析 CSS 规则的合法性, 只提供结构上的操作和一些辅助方法.</p>
+该实现不分析 CSS 规则的合法性, 只提供结构上的操作和一些辅助方法.
+如果要对结果进行再次处理, 推荐使用 walk 方法.</p>
 </dd>
 <dt><a href="#lineify">lineify</a></dt>
 <dd><p>lineify 是个非空白行扫描器, 扫描并返回非空白行信息.</p>
@@ -242,6 +243,7 @@ let 语句, 原生语法:
 ## Context
 PowCSS 缺省的 Context 实现.
 该实现不分析 CSS 规则的合法性, 只提供结构上的操作和一些辅助方法.
+如果要对结果进行再次处理, 推荐使用 walk 方法.
 
 **Kind**: global class  
 **Properties**
@@ -259,8 +261,9 @@ PowCSS 缺省的 Context 实现.
     * [.open(name)](#Context+open) ⇒ <code>this</code>
     * [.close()](#Context+close) ⇒ <code>this</code>
     * [.name()](#Context+name) ⇒ <code>string</code>
-    * [.decl(key, val)](#Context+decl) ⇒ <code>string</code> \| <code>object</code>
+    * [.decl(key, val)](#Context+decl) ⇒ <code>string</code>
     * [.toCSS()](#Context+toCSS) ⇒ <code>string</code>
+    * [.walk(context)](#Context+walk) ⇒ <code>boolean</code>
 
 <a name="new_Context_new"></a>
 
@@ -305,7 +308,7 @@ PowCSS 缺省的 Context 实现.
 **Kind**: instance method of [<code>Context</code>](#Context)  
 <a name="Context+decl"></a>
 
-### context.decl(key, val) ⇒ <code>string</code> \| <code>object</code>
+### context.decl(key, val) ⇒ <code>string</code>
 返回或设置当前规则的 key 声明
 
 **Kind**: instance method of [<code>Context</code>](#Context)  
@@ -313,7 +316,7 @@ PowCSS 缺省的 Context 实现.
 | Param | Type |
 | --- | --- |
 | key | <code>string</code> | 
-| val | <code>string</code> \| <code>object</code> | 
+| val | <code>string</code> | 
 
 <a name="Context+toCSS"></a>
 
@@ -322,6 +325,20 @@ PowCSS 缺省的 Context 实现.
 
 **Kind**: instance method of [<code>Context</code>](#Context)  
 **Returns**: <code>string</code> - css  
+<a name="Context+walk"></a>
+
+### context.walk(context) ⇒ <code>boolean</code>
+遍历 this.rules 调用 context 的 open, close, decl 方法.
+context 的 open, close 返回的对象会用于后续的迭代.
+任何一个方法返回非真值会终止遍历.
+
+**Kind**: instance method of [<code>Context</code>](#Context)  
+**Returns**: <code>boolean</code> - finished 是否完全遍历  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| context | <code>object</code> | 实现 open, close, decl 方法的对象 |
+
 <a name="lineify"></a>
 
 ## lineify
