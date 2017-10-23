@@ -2,18 +2,8 @@
 
 <dl>
 <dt><a href="#PowCSS">PowCSS</a></dt>
-<dd><p>PowCSS 通过插件对 CSS 进行处理, 分多个工作期:</p>
-<p>process 解析输入源转换为节点树(root)
-compile 使用插件编译节点树中的未决节点
-yield   遍历节点树进行构建, 构建行为由 Context 决定.
-cssify  输出构建后的 CSS 源码</p>
-<p>PowCSS 最重要的核心有两个</p>
-<ol>
-<li>编译插件模型 @see Plugin</li>
-<li>渲染上下文 @see Context</li>
-</ol>
-<p>在 PowCSS 的设计中, 允许编译后的结果脱离 PowCSS 进行渲染.
-Context 就是为了实现这个目标, 它很简单, 重构或扩展非常容易.</p>
+<dd><p>PowCSS 负责解析 source 为节点树, 并拼接编译器的编译结果.
+在 PowCSS 中的插件就是 compiler, compiler 负责与 context 配合.</p>
 </dd>
 <dt><a href="#Compiler">Compiler</a></dt>
 <dd><p>PowCSS 缺省的 Compiler 实现.
@@ -32,7 +22,7 @@ Context 就是为了实现这个目标, 它很简单, 重构或扩展非常容�
 
 <dl>
 <dt><a href="#util">util</a></dt>
-<dd><p>辅助函数集合, ctx 总是(扩展)继承 util 的所有方法.</p>
+<dd><p>辅助方法集合</p>
 </dd>
 </dl>
 
@@ -47,20 +37,8 @@ Context 就是为了实现这个目标, 它很简单, 重构或扩展非常容�
 <a name="PowCSS"></a>
 
 ## PowCSS
-PowCSS 通过插件对 CSS 进行处理, 分多个工作期:
-
-process 解析输入源转换为节点树(root)
-compile 使用插件编译节点树中的未决节点
-yield   遍历节点树进行构建, 构建行为由 Context 决定.
-cssify  输出构建后的 CSS 源码
-
-PowCSS 最重要的核心有两个
-
-  1. 编译插件模型 @see Plugin
-  2. 渲染上下文 @see Context
-
-在 PowCSS 的设计中, 允许编译后的结果脱离 PowCSS 进行渲染.
-Context 就是为了实现这个目标, 它很简单, 重构或扩展非常容易.
+PowCSS 负责解析 source 为节点树, 并拼接编译器的编译结果.
+在 PowCSS 中的插件就是 compiler, compiler 负责与 context 配合.
 
 **Kind**: global class  
 
@@ -81,18 +59,18 @@ Context 就是为了实现这个目标, 它很简单, 重构或扩展非常容�
 
 | Param | Type | Description |
 | --- | --- | --- |
-| plugins | <code>Array.&lt;Plugin&gt;</code> | 处理器数组缺省为 [compiler()] |
+| plugins | [<code>Array.&lt;Compiler&gt;</code>](#Compiler) | 编译器数组, 缺省为 [compiler()] |
 
 <a name="PowCSS+use"></a>
 
 ### powCSS.use(plugin) ⇒ <code>this</code>
-使用一个插件
+使用一个编译器插件
 
 **Kind**: instance method of [<code>PowCSS</code>](#PowCSS)  
 
 | Param | Type |
 | --- | --- |
-| plugin | <code>Plugin</code> | 
+| plugin | [<code>Compiler</code>](#Compiler) | 
 
 <a name="PowCSS+process"></a>
 
@@ -127,7 +105,7 @@ Context 就是为了实现这个目标, 它很简单, 重构或扩展非常容�
 <a name="PowCSS+format"></a>
 
 ### powCSS.format(root) ⇒ <code>string</code>
-格式化输出 root 节点树
+格式化输出 root.nodes
 
 **Kind**: instance method of [<code>PowCSS</code>](#PowCSS)  
 **Returns**: <code>string</code> - CSS  无花括号两空格缩进格式  
@@ -304,8 +282,8 @@ PowCSS 缺省的 Context 实现.
 <a name="Context+open"></a>
 
 ### context.open(name) ⇒ <code>this</code>
-当前规则入栈, 并开启一个新具名规则并替换 name 中的占位符 '&'.
-该方法必须与 close 成对使用. 只有 '@' 规则下嵌套使用 open 会产生嵌套规则.
+开启一个具名规则并替换 name 中的占位符 '&', 该方法必须与 close 成对使用.
+嵌套使用时 this.stack 会增长.
 
 **Kind**: instance method of [<code>Context</code>](#Context)  
 
@@ -316,7 +294,7 @@ PowCSS 缺省的 Context 实现.
 <a name="Context+close"></a>
 
 ### context.close() ⇒ <code>this</code>
-关闭当前的规则, 并弹出规则栈. 该方法必须与 .open 成对使用.
+关闭当前的规则, this.stack 会减少, 该方法必须与 .open 成对使用.
 
 **Kind**: instance method of [<code>Context</code>](#Context)  
 <a name="Context+name"></a>
@@ -374,7 +352,7 @@ lineify 是个非空白行扫描器, 扫描并返回非空白行信息.
 <a name="util"></a>
 
 ## util
-辅助函数集合, ctx 总是(扩展)继承 util 的所有方法.
+辅助方法集合
 
 **Kind**: global variable  
 

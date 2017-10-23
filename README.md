@@ -1,5 +1,10 @@
 # PowCSS
 
+[![badge](https://img.shields.io/badge/Pow-CSS-green.svg?style=flat-square)](https://github.com/powjs/powcss)
+[![npm](https://img.shields.io/npm/l/powcss.svg?style=flat-square)](https://www.npmjs.org/package/powcss)
+[![npm](https://img.shields.io/npm/dm/powcss.svg?style=flat-square)](https://www.npmjs.org/package/powcss)
+[![npm](https://img.shields.io/npm/dt/powcss.svg?style=flat-square)](https://www.npmjs.org/package/powcss)
+
 PowCSS 是个 CSS 预处理工具. 特征:
 
     混合 CSS, JavaScript 缩进语法
@@ -81,16 +86,45 @@ function(ctx) {
 
 ## install
 
-nodejs 环境, 演示 [runkit][]
+nodejs 环境
 
 ```sh
 yarn add powcss
 ```
 
-浏览器环境, 演示 [codepen][], [requirebin][]
+浏览器环境
 
 ```html
 <script src="//unpkg.com/powcss/dist/powcss.min.js"></script>
+```
+
+## usage
+
+nodejs 环境, 演示 [runkit][]
+
+```js
+const powcss = require('powcss');
+
+// const context = require('powcss/lib/context');
+
+let ctx = powcss().run(`
+.class
+  color: green
+`);
+// ctx.toCSS() or ...
+```
+
+浏览器环境, 演示 [codepen][], [requirebin][]
+
+```html
+<script>
+// const context = powcss.context;
+let ctx = powcss().run(`
+.class
+  color: green
+`);
+// ctx.toCSS() or ...
+</script>
 ```
 
 ## 缩进语法
@@ -146,6 +180,10 @@ compile(n, i, ns){}
 
 PowCSS 实现的 Compiler 直接使用原生 JS 语法, 不对语法进行分析.
 
+参见 [API](api.md)
+
+**提示: 把 CSS 当作 JavaScript 来写就对了**
+
 源码中比较容易常犯的错误:
 
 ```styl
@@ -174,17 +212,21 @@ color: 1px
 border: 1px
 ```
 
-**提示: 把 CSS 当作 JavaScript 来写就对了**
-
-参见 [API](api.md)
-
 ## Context
 
-Context 负责提供生成和维护 CSS 规则的基本方法, 值表达式由配套的 Compiler 提供.
+Context 负责提供生成和维护 CSS 规则的基本方法, 值表达式由配套的 Compiler 生成.
 
 PowCSS 实现的 Context 维护规则的 open 和 close 等操作, 并负责处理 '&' 占位符.
 
 参见 [API](api.md)
+
+## 赞助
+
+赞助以帮助 PowCSS 持续更新
+
+![通过支付宝赞助](https://user-images.githubusercontent.com/489285/31326203-9b0c95c0-ac8a-11e7-9161-b2d8f1cc00e8.png)
+![通过微信赞助](https://user-images.githubusercontent.com/489285/31326223-c62b133a-ac8a-11e7-9af5-ff5465872280.png)
+[![通过 Paypal 赞助](https://user-images.githubusercontent.com/489285/31326166-63e63682-ac8a-11e7-829a-0f75875ac88a.png)](https://www.paypal.me/HengChunYU/5)
 
 ## License
 

@@ -1,9 +1,12 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 (function (global){
 global.powcss = require('./lib/powcss.js');
-
+global.powcss.lineify = require('./lib/lineify');
+global.powcss.compiler = require('./lib/compiler');
+global.powcss.context = require('./lib/context');
+global.powcss.util =  require('./lib/util');
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./lib/powcss.js":5}],2:[function(require,module,exports){
+},{"./lib/compiler":2,"./lib/context":3,"./lib/lineify":4,"./lib/powcss.js":5,"./lib/util":6}],2:[function(require,module,exports){
 const IFX = /if[ ]+([_$a-zA-Z]+)[ ]*=/,
   util =  require('./util');
 
@@ -168,39 +171,45 @@ class Context {
   }
 
   /**
-   * 当前规则入栈, 并开启一个新具名规则并替换 name 中的占位符 '&'.
-   * 该方法必须与 close 成对使用. 只有 '@' 规则下嵌套使用 open 会产生嵌套规则.
+   * 开启一个具名规则并替换 name 中的占位符 '&', 该方法必须与 close 成对使用.
+   * 嵌套使用时 this.stack 会增长.
    * @param  {string} name
    * @return {this}
    */
   open(name) {
-    let prev = this.name();
-    if (prev) {
+    if (this.rule) {
       this.stack.push(this.rule);
       if (name.indexOf('&') !== -1)
-        name = name.replace(/&/g, prev);
-    }
+        name = name.replace(/&/g, this.rule.name);
 
-    if (prev && prev[0] === '@') {
-      let rule = {name};
-      this.rule.decls = this.rule.decls || [];
-      this.rule.decls.push(rule);
-      this.rule = rule;
-    }else {
-      this.rule = {name};
-      this.rules.push(this.rule);
+      if (!this.rule.decls) {
+        if (this.rule.name[0] === '@') {
+          this.rule.decls = [];
+          this.stack.push(this.rules);
+          this.rules = this.rule.decls;
+        }else if (
+          this.rule.name[0] !== '/' &&
+          this.rule === this.rules[this.rules.length - 1]
+         ) {
+          this.rules.pop();
+        }
+      }
     }
-
+    this.rule = {name};
+    this.rules.push(this.rule);
     return this;
   }
 
   /**
-   * 关闭当前的规则, 并弹出规则栈. 该方法必须与 .open 成对使用.
+   * 关闭当前的规则, this.stack 会减少, 该方法必须与 .open 成对使用.
    * @return {this}
    */
   close() {
-    let rule = this.stack.pop();
-    this.rule = rule;
+    this.rule = this.stack.pop();
+    if (Array.isArray(this.rule)) {
+      this.rules = this.rule;
+      return this.close();
+    }
     return this;
   }
 
@@ -246,7 +255,7 @@ class Context {
         css += '}\n';
       }else if (rule.name[0] === '/') // comment
         css += rule.name + '\n';
-      else
+      else if (rule.name[0] === '@') // 有些规则只是为了嵌套 '&', 没有 decls
         css += rule.name + ';\n';
       return css;
     };
@@ -346,32 +355,20 @@ const lineify = require('./lineify'),
     /\bcontinue\( *((?:\.|[$a-zA-Z_]+[$\w]*)(?: *, *[$a-zA-Z_.]+[$\w]*)*)* *\)/;
 
 /**
- * PowCSS 通过插件对 CSS 进行处理, 分多个工作期:
- *
- * process 解析输入源转换为节点树(root)
- * compile 使用插件编译节点树中的未决节点
- * yield   遍历节点树进行构建, 构建行为由 Context 决定.
- * cssify  输出构建后的 CSS 源码
- *
- * PowCSS 最重要的核心有两个
- *
- *   1. 编译插件模型 @see Plugin
- *   2. 渲染上下文 @see Context
- *
- * 在 PowCSS 的设计中, 允许编译后的结果脱离 PowCSS 进行渲染.
- * Context 就是为了实现这个目标, 它很简单, 重构或扩展非常容易.
+ * PowCSS 负责解析 source 为节点树, 并拼接编译器的编译结果.
+ * 在 PowCSS 中的插件就是 compiler, compiler 负责与 context 配合.
  */
 class PowCSS {
   /**
-   * @param  {?Plugin[]} plugins 处理器数组缺省为 [compiler()]
+   * @param  {?Compiler[]} plugins 编译器数组, 缺省为 [compiler()]
    */
   constructor(plugins) {
     this.plugins = plugins && plugins.length || [compiler()];
   }
 
   /**
-   * 使用一个插件
-   * @param  {Plugin} plugin
+   * 使用一个编译器插件
+   * @param  {Compiler} plugin
    * @return {this}
    */
   use(plugin) {
@@ -541,7 +538,7 @@ class PowCSS {
   }
 
   /**
-   * 格式化输出 root 节点树
+   * 格式化输出 root.nodes
    * @param  {object} root 解析后的节点树
    * @return {string} CSS  无花括号两空格缩进格式
    */
@@ -672,7 +669,7 @@ module.exports = function(plugins) {
 const toString = Object.prototype.toString;
 
 /**
- * 辅助函数集合, ctx 总是(扩展)继承 util 的所有方法.
+ * 辅助方法集合
  */
 let util = {
   /**
