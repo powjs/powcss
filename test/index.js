@@ -213,3 +213,10 @@ test('nested', function(assert) {
   }
   assert.end();
 });
+
+test('context.walk', function(assert) {
+  let ctx = context();
+  powcss().run('div\n color: red').walk(ctx);
+  assert.equal(ctx.toCSS(), 'div {\ncolor: red;\n}\n');
+  assert.end();
+});
