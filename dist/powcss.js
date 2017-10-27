@@ -61,7 +61,8 @@ class Compiler{
     if (n.mode) return;
     let c = n.source.indexOf('${') === -1 && '\'' || '`';
     return n.nodes && n.nodes.length &&
-    `${this.ctx}.open(${c}${n.source}${c});\n...${this.ctx}.close();` ||
+    `${this.ctx}.open(${c}${n.source}${c});
+...${this.ctx}.close();` ||
     `${this.ctx}.open(${c}${n.source}${c}).close();`;
   }
 
@@ -98,9 +99,9 @@ class Compiler{
    *
    */
   each(n) {
-    if (n.source.startsWith('ctx.each('))
+    if (n.source.startsWith(`${this.ctx}.each(`))
       return n.source;
-    if (n.source.startsWith('each(')) return 'ctx.' + n.source;
+    if (n.source.startsWith('each(')) return this.ctx + '.' + n.source;
   }
 
   /**
@@ -400,7 +401,7 @@ class PowCSS {
    * @param  {?Compiler[]} plugins 编译器数组, 缺省为 [compiler()]
    */
   constructor(plugins) {
-    this.plugins = plugins && plugins.length || [compiler()];
+    this.plugins = plugins && plugins.length && plugins || [compiler()];
   }
 
   /**

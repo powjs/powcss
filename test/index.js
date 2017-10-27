@@ -2,6 +2,7 @@ let test = require('tape'),
   lineify = require('../lib/lineify'),
   powcss = require('../lib/powcss'),
   context = require('../lib/context'),
+  compiler = require('../lib/compiler'),
   prettier = require('prettier');
 
 function format(code, log) {
@@ -218,5 +219,15 @@ test('context.walk', function(assert) {
   let ctx = context();
   powcss().run('div\n color: red').walk(ctx);
   assert.equal(ctx.toCSS(), 'div {\ncolor: red;\n}\n');
+  assert.end();
+});
+
+test('customize ctx', function(assert) {
+  let css = powcss([compiler({ctx:'c'})]).run(
+        'each(["a"], (a)=>{...})\n ${a}\n  color: red',
+        'c'
+      ).toCSS();
+
+  assert.equal(css, 'a {\ncolor: red;\n}\n');
   assert.end();
 });
