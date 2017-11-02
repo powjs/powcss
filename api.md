@@ -195,8 +195,7 @@ compile 接口
 <a name="Compiler+comment"></a>
 
 ### compiler.comment()
-编译 n.mode === 'comment' 的节点
-返回值是 ' ', 这意味着注释被丢弃
+编译 n.mode === 'comment' 的节点, '/*!' 开头的顶层注释被保留, 其它被抛弃.
 
 **Kind**: instance method of [<code>Compiler</code>](#Compiler)  
 <a name="Compiler+rule"></a>

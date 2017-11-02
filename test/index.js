@@ -231,3 +231,22 @@ test('customize ctx', function(assert) {
   assert.equal(css, 'a {\ncolor: red;\n}\n');
   assert.end();
 });
+
+let comments =`
+/* no */
+div
+  // no
+  /**
+   * no
+   */
+  w: 1 // no
+/*!
+ * yes
+ */
+`;
+test('comments', function(assert) {
+  let css = powcss().run(comments).toCSS();
+  assert.equal(css.indexOf('no'), -1);
+  assert.notEqual(css.indexOf('yes'), -1);
+  assert.end();
+});
