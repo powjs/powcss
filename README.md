@@ -147,19 +147,9 @@ selector2
 continuation
   border: 1px solid \ // 符号 '\' 会被剔除, 其它续行符会被保留
     red
-
-// incorrect, ': ' 特别用来识别 decl
-@media (max-width: 599px)
-  div
-    display: block
-
-// correct
-@media (max-width:599px)
-  div
-    display: block
 ```
 
-**约定属性分隔符 ':' 后面必须跟一个空格或换行, 慎用 ': ' 避免冲突**
+**属性分隔符 ':' 后面必须跟一个空格或换行, 除非该行以 '@' 开头.**
 
 ## Compiler
 

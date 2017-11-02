@@ -185,8 +185,8 @@ let nested = [
     src:'@charset "utf-8"',
     css:'@charset "utf-8";'
   },{
-    src:'@media (max-width:599px)\n div\n  w: 1\n  c: 2',
-    css:'@media (max-width:599px) {\ndiv {\nw: 1;\nc: 2;\n}\n}'
+    src:'@media (max-width: 599px)\n div\n  w: 1\n  c: 2',
+    css:'@media (max-width: 599px) {\ndiv {\nw: 1;\nc: 2;\n}\n}'
   },{
     src:'a\n &.b\n  w: 1',
     css:'a.b {\nw: 1;\n}'
@@ -194,14 +194,14 @@ let nested = [
     src:'a\n &.b\n  w: 1\n &.c\n  h: 2',
     css:'a.b {\nw: 1;\n}\na.c {\nh: 2;\n}'
   },{
-    src:'@media (max-width:599px)\n a\n  &.b\n   w: 1\n  &.c\n   h: 2',
-    css:'@media (max-width:599px) {\na.b {\nw: 1;\n}\na.c {\nh: 2;\n}\n}'
+    src:'@media (max-width: 599px)\n a\n  &.b\n   w: 1\n  &.c\n   h: 2',
+    css:'@media (max-width: 599px) {\na.b {\nw: 1;\n}\na.c {\nh: 2;\n}\n}'
   },{
-    src:'@media (max-width:599px)\n @page\n  a\n   &.b\n    w: 1\n   &.c\n    h: 2',
-    css:'@media (max-width:599px) {\n@page {\na.b {\nw: 1;\n}\na.c {\nh: 2;\n}\n}\n}'
+    src:'@media (max-width: 599px)\n @page\n  a\n   &.b\n    w: 1\n   &.c\n    h: 2',
+    css:'@media (max-width: 599px) {\n@page {\na.b {\nw: 1;\n}\na.c {\nh: 2;\n}\n}\n}'
   },{
-    src:'@media (max-width:599px)\n @page\n  a\n   &.b\n    w: 1\n   &.c\n    h: 2\n    &.d\n     h: 3',
-    css:'@media (max-width:599px) {\n@page {\na.b {\nw: 1;\n}\na.c {\nh: 2;\n}\na.c.d {\nh: 3;\n}\n}\n}'
+    src:'@media (max-width: 599px)\n @page\n  a\n   &.b\n    w: 1\n   &.c\n    h: 2\n    &.d\n     h: 3',
+    css:'@media (max-width: 599px) {\n@page {\na.b {\nw: 1;\n}\na.c {\nh: 2;\n}\na.c.d {\nh: 3;\n}\n}\n}'
   }
 ];
 
