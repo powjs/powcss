@@ -145,9 +145,6 @@ class Context {
    * 构造, 参数用来对 this 进行扩展.
    */
   constructor(...extend) {
-    this.rule = null;
-    this.rules = [];
-    this.stack = [];
     extend.forEach((ext) => {
       if (typeof ext === 'function')
         this[ext.name] = ext;
@@ -157,8 +154,19 @@ class Context {
         }
       }
     });
+    this.reset();
   }
 
+  /**
+   * 重置 .rule, .rules, .stack 为初始状态
+   * @return {this}
+   */
+  reset() {
+    this.rule = null;
+    this.rules = [];
+    this.stack = [];
+    return this;
+  }
   /**
    * 遍历 x 回调 callback(val, key)
    * @param  {object|array}   x

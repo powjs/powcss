@@ -256,6 +256,7 @@ PowCSS 缺省的 Context 实现.
 
 * [Context](#Context)
     * [new Context()](#new_Context_new)
+    * [.reset()](#Context+reset) ⇒ <code>this</code>
     * [.each(x, callback)](#Context+each) ⇒ <code>this</code>
     * [.open(name)](#Context+open) ⇒ <code>this</code>
     * [.close()](#Context+close) ⇒ <code>this</code>
@@ -269,6 +270,12 @@ PowCSS 缺省的 Context 实现.
 ### new Context()
 构造, 参数用来对 this 进行扩展.
 
+<a name="Context+reset"></a>
+
+### context.reset() ⇒ <code>this</code>
+重置 .rule, .rules, .stack 为初始状态
+
+**Kind**: instance method of [<code>Context</code>](#Context)  
 <a name="Context+each"></a>
 
 ### context.each(x, callback) ⇒ <code>this</code>
