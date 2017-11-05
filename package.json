@@ -1,7 +1,7 @@
 {
   "name": "powcss",
   "description": "Modern preprocessor for transforming styles based on ES6 template Strings",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "repository": {
     "type": "git",
     "url": "https://github.com/powjs/powcss.git"
